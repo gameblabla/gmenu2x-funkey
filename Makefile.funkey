@@ -1,0 +1,42 @@
+PRGNAME     = gmenu2x
+CC          = /opt/funkey-toolchain/bin/arm-linux-gcc
+CXX 		= /opt/funkey-toolchain/bin/arm-linux-g++
+#### Configuration
+
+#### End of Configuration
+
+GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
+
+INCLUDES	= -I. -Isrc
+
+# Retrostone extra defines
+DEFINES		= -DHAVE_LIBOPK -DENABLE_CPUFREQ -DHAVE_LIBXDGMIME
+
+
+CFLAGS		= -Os -fsingle-precision-constant -fno-PIC -flto -fno-common -Wall $(INCLUDES) $(DEFINES)
+CFLAGS		+= -march=armv7-a+neon-vfpv4 -mtune=cortex-a7 -mfpu=neon-vfpv4
+CFLAGS		+= -fdata-sections -ffunction-sections -fsingle-precision-constant -freorder-functions -fno-math-errno -fgcse-las -fgcse-sm -fmerge-all-constants
+CFLAGS		+= `/opt/funkey-toolchain/arm-buildroot-linux-musleabihf/sysroot/usr/bin/sdl-config --cflags`
+
+CXXFLAGS	= $(CFLAGS) -ftree-vectorize -std=gnu++14
+LDFLAGS     = -lc -lgcc -lstdc++ -lstdc++fs -lm -lSDL -lSDL_ttf -lSDL_gfx -lbz2 -lpng -lasound -lfreetype -lini -lopk -lxdgmime -lfreetype -lz -pthread -Wl,-z,norelro -Wl,--hash-style=gnu -Wl,--build-id=none -Wl,-O1,--sort-common,--as-needed,--gc-sections -flto -no-pie -s
+
+# Files to be compiled
+SRCDIR 		=  ./src 
+VPATH		= $(SRCDIR)
+SRC_C		= $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.c))
+SRC_CPP		= $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.cpp))
+OBJ_C		= $(notdir $(patsubst %.c, %.o, $(SRC_C)))
+OBJ_CPP		= $(notdir $(patsubst %.cpp, %.o, $(SRC_CPP)))
+OBJS		= $(OBJ_C) $(OBJ_CPP)
+
+# Rules to make executable
+$(PRGNAME): $(OBJS)  
+	$(CXX) $(CXXFLAGS) -o $(PRGNAME) $^ $(LDFLAGS)
+	
+$(OBJ_CPP) : %.o : %.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+	
+
+clean:
+	rm -f $(PRGNAME)$(EXESUFFIX) *.o
